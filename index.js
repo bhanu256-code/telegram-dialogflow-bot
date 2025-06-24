@@ -20,3 +20,4 @@ fetch(TELEGRAM_API + "/getMe")
     console.error("CONNECTION FAILED!");
     console.log("Test this URL manually: " + TELEGRAM_API + "/getMe");
   });
+process.env.PORT = 3000;  // Add this line at the end of your file
