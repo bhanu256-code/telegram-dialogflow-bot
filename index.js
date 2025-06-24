@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 
 const TELEGRAM_TOKEN = "8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI";
-const TELEGRAM_API_URL = https://api.telegram.org/bot${TELEGRAM_TOKEN};
+const TELEGRAM_API_URL = https://api.telegram.org/bot${TELEGRAM_TOKEN}';
 
 const projectId = "YOUR_DIALOGFLOW_PROJECT_ID";
 const sessionId = "123456";
