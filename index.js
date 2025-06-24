@@ -1,64 +1,28 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const axios = require("axios");
+require('dotenv').config(); // Load environment variables (if using .env)
+const axios = require('axios'); // Make sure to install with: npm install axios
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// Telegram Bot Token (from @BotFather)
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI';
+const TELEGRAM_API_URL = https://api.telegram.org/bot${TELEGRAM_TOKEN};
 
-app.use(bodyParser.json());
-
-const TELEGRAM_TOKEN = "8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI";
-const TELEGRAM_API_URL = https://api.telegram.org/bot${TELEGRAM_TOKEN}';
-
-const projectId = "YOUR_DIALOGFLOW_PROJECT_ID";
-const sessionId = "123456";
-const dialogflowToken = "YOUR_DIALOGFLOW_AUTH_TOKEN";
-
-app.post("/webhook", async (req, res) => {
-  const message = req.body.message;
-  if (!message || !message.text) return res.sendStatus(200);
-
-  const userMessage = message.text;
-  const chatId = message.chat.id;
-
+// Initialize bot
+async function startBot() {
   try {
-    const url = https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent;
+    // Test the token first
+    const testResponse = await axios.get(${TELEGRAM_API_URL}/getMe);
+    console.log('Bot connected successfully:', testResponse.data.result.username);
 
-    const response = await axios.post(
-      url,
-      {
-        queryInput: {
-          text: {
-            text: userMessage,
-            languageCode: "en",
-          },
-        },
-      },
-      {
-        headers: {
-          Authorization: Bearer ${dialogflowToken},
-        },
-      }
-    );
-
-    const reply = response.data.queryResult.fulfillmentText || "Sorry, I didn't understand that.";
-
-    await axios.post(${TELEGRAM_API_URL}/sendMessage, {
-      chat_id: chatId,
-      text: reply,
-    });
+    // Your bot logic here (example: reply to messages)
+    console.log('Bot is running...');
+    
   } catch (error) {
-    console.error("Error:", error.message);
-
-    await axios.post(${TELEGRAM_API_URL}/sendMessage, {
-      chat_id: chatId,
-      text: "Something went wrong. Please try again.",
-    });
+    console.error('❌ Bot failed to start:', error.message);
+    if (error.response) {
+      console.error('Telegram API error:', error.response.data);
+    }
+    process.exit(1); // Exit if can't connect
   }
+}
 
-  res.sendStatus(200);
-});
-
-app.listen(PORT, () => {
-  console.log(Server is running on port ${PORT});
-});
+// Start the bot
+startBot();
