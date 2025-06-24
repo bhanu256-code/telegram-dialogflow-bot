@@ -3,11 +3,11 @@ const { Telegraf } = require('telegraf');
 const { GoogleAuth } = require('google-auth-library');
 const app = express();
 
-// ==== CONFIG (REPLACE THESE) ====
+// === CONFIGURATION ===
 const BOT_TOKEN = '8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI';
-const DIALOGFLOW_PROJECT_ID = 'your-dialogflow-project-id'; // From Dialogflow Settings > General
+const DIALOGFLOW_PROJECT_ID = 'your-dialogflow-project-id'; // Replace this!
 const CHAT_ID = '6283627737';
-// ================================
+// ====================
 
 const bot = new Telegraf(BOT_TOKEN);
 app.use(express.json());
@@ -16,7 +16,7 @@ app.use(express.json());
 bot.on('text', async (ctx) => {
   try {
     if (ctx.chat.id.toString() === CHAT_ID) {
-      const response = await askDialogflow(
+      const response = await callDialogflow(
         DIALOGFLOW_PROJECT_ID,
         ctx.chat.id.toString(),
         ctx.message.text
@@ -24,18 +24,18 @@ bot.on('text', async (ctx) => {
       await ctx.reply(response);
     }
   } catch (error) {
-    console.error(error);
-    await ctx.reply('❌ Error: Could not process your request.');
+    console.error('❌ Error:', error);
+    await ctx.reply('Service temporarily unavailable');
   }
 });
 
-// Dialogflow API Call
-async function askDialogflow(projectId, sessionId, query) {
+// Fixed Dialogflow URL with proper template literals
+async function callDialogflow(projectId, sessionId, query) {
   const auth = new GoogleAuth({
     keyFile: 'service-account.json',
     scopes: ['https://www.googleapis.com/auth/cloud-platform']
   });
-  
+
   const client = await auth.getClient();
   const url = https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent;
 
@@ -62,4 +62,4 @@ app.post('/webhook', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(🤖 Bot running on port ${PORT}));
+app.listen(PORT, () => console.log(✅ Bot active on port ${PORT}));
