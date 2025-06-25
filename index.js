@@ -1,7 +1,7 @@
 import fetch from 'node-fetch'; // Only if you're using ESM (Node >= v18)
 
 const TELEGRAM_TOKEN = 'your_bot_token_here'; // Replace with real Bot Token
-const TELEGRAM_API = https://api.telegram.org/bot${TELEGRAM_TOKEN};
+const TELEGRAM_API = 'https://api.telegram.org/bot${TELEGRAM_TOKEN}';
 
 // Example function to send a message
 async function sendMessage(chatId, message) {
