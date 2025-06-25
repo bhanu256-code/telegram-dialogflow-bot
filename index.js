@@ -1,71 +1,65 @@
-// --------------------- Telegram Setup ---------------------
-const TELEGRAM_TOKEN = "8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI";
-const TELEGRAM_API = "https://api.telegram.org/bot" + TELEGRAM_TOKEN;
+import express from "express";
+import fetch from "node-fetch";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue } from "firebase/database";
+import dotenv from "dotenv";
 
-let lastUpdateId = 0;
+dotenv.config();
 
-// --------------------- Firebase Setup ---------------------
-const { initializeApp } = require("firebase/app");
-const { getDatabase, ref, set } = require("firebase/database");
+const app = express();
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const chatId = process.env.TELEGRAM_CHAT_ID;
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDvXnr1_fVWgNIDO0rDY6mTU4EldDmMrAY",
-  authDomain: "evbatterymonitor-4c65d.firebaseapp.com",
-  databaseURL: "https://evbatterymonitor-4c65d-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "evbatterymonitor-4c65d",
-  storageBucket: "evbatterymonitor-4c65d.appspot.com",
-  messagingSenderId: "499527178695",
-  appId: "1:499527178695:web:d65a1f85b92f01af0021e2",
-  measurementId: "G-RBZH15K722"
+  apiKey: process.env.FB_API_KEY,
+  authDomain: process.env.FB_AUTH_DOMAIN,
+  databaseURL: process.env.FB_DB_URL,
+  projectId: process.env.FB_PROJECT_ID,
+  storageBucket: process.env.FB_STORAGE_BUCKET,
+  messagingSenderId: process.env.FB_MESSAGING_SENDER_ID,
+  appId: process.env.FB_APP_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const firebaseApp = initializeApp(firebaseConfig);
+const database = getDatabase(firebaseApp);
 
-// --------------------- Web Server for Render ---------------------
-require('http').createServer((req, res) => {
-  res.end('Bot is running');
-}).listen(3000);
+const tempRef = ref(database, "battery/temperature");
+const currentRef = ref(database, "battery/current");
 
-// --------------------- Main Bot Logic ---------------------
-async function checkMessages() {
-  try {
-    const response = await fetch(TELEGRAM_API + "/getUpdates?offset=" + (lastUpdateId + 1));
-    const data = await response.json();
+let lastTemp = null;
+let lastCurrent = null;
 
-    if (data.result?.length > 0) {
-      for (const update of data.result) {
-        const msg = update.message;
-        lastUpdateId = update.update_id;
-
-        console.log("Received:", msg.text);
-
-        // ✅ Write to Firebase
-        const messageRef = ref(db, "messages/" + msg.message_id);
-        await set(messageRef, {
-          user: msg.from.first_name,
-          message: msg.text,
-          timestamp: Date.now()
-        });
-
-        // ✅ Send Reply
-        await fetch(TELEGRAM_API + "/sendMessage", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: msg.chat.id,
-            text: "Hello! You said: " + msg.text
-          })
-        });
-      }
-    }
-  } catch (error) {
-    console.log("Error:", error.message);
-  }
-
-  setTimeout(checkMessages, 3000); // Repeat every 3 seconds
+function sendMessage(message) {
+  const url = https://api.telegram.org/bot${botToken}/sendMessage;
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text: message }),
+  })
+    .then((res) => res.json())
+    .then((data) => console.log("Sent:", data))
+    .catch((err) => console.error("Telegram Error:", err));
 }
 
-console.log("🤖 Bot started successfully");
-checkMessages();
+// Watch Temperature
+onValue(tempRef, (snapshot) => {
+  const temp = snapshot.val();
+  if (temp !== lastTemp) {
+    sendMessage(🌡 Battery Temperature: ${temp}°C);
+    lastTemp = temp;
+  }
+});
+
+// Watch Current
+onValue(currentRef, (snapshot) => {
+  const current = snapshot.val();
+  if (current !== lastCurrent) {
+    sendMessage(🔋 Battery Current: ${current} A);
+    lastCurrent = current;
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(EV Bot server running on port ${PORT});
+});
