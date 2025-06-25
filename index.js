@@ -4,12 +4,13 @@ import { getDatabase, ref, get } from 'firebase/database';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 
+// Initialize environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Firebase
+// Firebase Configuration
 const firebaseApp = initializeApp({
   apiKey: process.env.FB_API_KEY,
   authDomain: process.env.FB_AUTH_DOMAIN,
@@ -19,50 +20,65 @@ const firebaseApp = initializeApp({
   messagingSenderId: process.env.FB_MESSAGING_SENDER_ID,
   appId: process.env.FB_APP_ID
 });
+
 const database = getDatabase(firebaseApp);
 
-// Telegram setup (FIXED: Added backticks)
+// Telegram Configuration (FIXED WITH BACKTICKS)
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API = https://api.telegram.org/bot${TELEGRAM_TOKEN}; // ✅ Backticks added
+const TELEGRAM_API = https://api.telegram.org/bot${TELEGRAM_TOKEN};
 
 app.use(express.json());
 
-// Webhook handler
+// Webhook Endpoint
 app.post('/webhook', async (req, res) => {
-  const { message } = req.body;
-  if (!message?.text) return res.sendStatus(200);
+  try {
+    const { message } = req.body;
+    if (!message?.text) return res.sendStatus(200);
 
-  const response = await generateResponse(message);
-  if (response) {
-    await fetch(${TELEGRAM_API}/sendMessage, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: message.chat.id,
-        text: response
-      })
-    });
+    const response = await generateResponse(message);
+    if (response) {
+      await fetch(${TELEGRAM_API}/sendMessage, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: message.chat.id,
+          text: response
+        })
+      });
+    }
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Webhook Error:', error);
+    res.sendStatus(500);
   }
-  res.sendStatus(200);
 });
 
+// Response Generator
 async function generateResponse(message) {
   const command = message.text.toLowerCase();
   
   if (command.includes('photo')) {
-    return "📸 Photo upload feature coming soon!";
+    return "📸 Photo uploads coming soon!";
   }
   
   if (command.includes('status') || command.includes('?')) {
     const snapshot = await get(ref(database, 'battery'));
     const data = snapshot.val() || {};
     return 🔋 Battery Status:\n
-         + - Temp: ${data.temperature || 'N/A'}°C\n
+         + - Temperature: ${data.temperature || 'N/A'}°C\n
          + - Current: ${data.current || 'N/A'}A;
   }
 
   return null;
 }
 
-app.get('/', (req, res) => res.send('✅ Bot Active'));
-app.listen(PORT, () => console.log(🚀 Server running on port ${PORT}));
+// Health Check
+app.get('/', (req, res) => {
+  res.send('✅ EV Monitoring Bot is Active');
+});
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(🚀 Server running on port ${PORT});
+  console.log(🔔 Set webhook: ${TELEGRAM_API}/setWebhook?url=[YOUR_RENDER_URL]/webhook);
+});
