@@ -4,11 +4,12 @@ const { GoogleAuth } = require('google-auth-library');
 const app = express();
 
 // Config (replace these!)
-const BOT_TOKEN = '8105233862:AAFMDwNfKBCX5Ng5mpVF6jd8JcaZq7RQZnI';
-const DIALOGFLOW_PROJECT_ID = 'your-dialogflow-project-id';
+const BOT_TOKEN = '8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI';
+const DIALOGFLOW_PROJECT_ID = 'evbatterymonitor-4c65d';
 const PORT = process.env.PORT || 3000;
 
 const bot = new Telegraf(BOT_TOKEN);
+bot.launch();
 
 // Handle Telegram messages
 bot.on('text', async (ctx) => {
@@ -34,7 +35,7 @@ async function askDialogflow(projectId, sessionId, query) {
   const client = await auth.getClient();
 
   // 🔴 ERROR WAS HERE (missing backticks ` for string interpolation)
-  const url ='https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent';
+  const url =`https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`;
 
   const { data } = await client.request({
     url,
@@ -59,4 +60,4 @@ app.post('/webhook', (req, res) => {
 });
 
 // 🔵 FIXED THIS LINE — now has 2 correct brackets and proper backticks
-app.listen(PORT, () => console.log('🚀 Server running on port ${PORT}'));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
