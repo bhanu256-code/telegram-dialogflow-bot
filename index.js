@@ -1,17 +1,16 @@
 import express from 'express';
-import fetch from 'node-fetch';
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, onValue } from 'firebase/database';
+import { getDatabase, ref, get } from 'firebase/database';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
 dotenv.config();
 
 const app = express();
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const chatId = process.env.TELEGRAM_CHAT_ID;
+const PORT = process.env.PORT || 3000;
 
-// Firebase Config
-const firebaseConfig = {
+// Initialize Firebase (values come from environment variables)
+const firebaseApp = initializeApp({
   apiKey: process.env.FB_API_KEY,
   authDomain: process.env.FB_AUTH_DOMAIN,
   databaseURL: process.env.FB_DB_URL,
@@ -19,72 +18,51 @@ const firebaseConfig = {
   storageBucket: process.env.FB_STORAGE_BUCKET,
   messagingSenderId: process.env.FB_MESSAGING_SENDER_ID,
   appId: process.env.FB_APP_ID
-};
-
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
+});
 const database = getDatabase(firebaseApp);
 
-// Thresholds
-const TEMP_THRESHOLD = 2;
-const CURRENT_THRESHOLD = 5;
+// Telegram setup
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_API = https://api.telegram.org/bot${TELEGRAM_TOKEN};
 
-let lastValues = { temp: null, current: null };
-let lastMessageTime = 0;
-const MESSAGE_COOLDOWN = 30000;
+app.use(express.json());
 
-async function sendMessage(message) {
-  const now = Date.now();
-  if (now - lastMessageTime < MESSAGE_COOLDOWN) return;
+// Webhook handler
+app.post('/webhook', async (req, res) => {
+  const { message } = req.body;
+  if (!message?.text) return res.sendStatus(200);
 
-  try {
-    const response = await fetch(https://api.telegram.org/bot${botToken}/sendMessage, {
+  const response = await generateResponse(message);
+  if (response) {
+    await fetch(${TELEGRAM_API}/sendMessage, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        disable_notification: true
+        chat_id: message.chat.id,
+        text: response
       })
     });
-    lastMessageTime = now;
-    console.log('Alert sent:', message);
-  } catch (err) {
-    console.error('Telegram Error:', err);
   }
+  res.sendStatus(200);
+});
+
+async function generateResponse(message) {
+  const command = message.text.toLowerCase();
+  
+  if (command.includes('photo')) {
+    return "📸 Photo upload feature coming soon!";
+  }
+  
+  if (command.includes('status') || command.includes('?')) {
+    const snapshot = await get(ref(database, 'battery'));
+    const data = snapshot.val() || {};
+    return 🔋 Battery Status:\n
+         + - Temp: ${data.temperature || 'N/A'}°C\n
+         + - Current: ${data.current || 'N/A'}A;
+  }
+
+  return null; // Ignore unrelated messages
 }
 
-// Database listeners
-onValue(ref(database, 'battery/temperature'), (snapshot) => {
-  const temp = snapshot.val();
-  if (temp === null || lastValues.temp === null) {
-    lastValues.temp = temp;
-    return;
-  }
-  if (Math.abs(temp - lastValues.temp) >= TEMP_THRESHOLD) {
-    sendMessage(🌡 Temp Alert: ${lastValues.temp}°C → ${temp}°C);
-    lastValues.temp = temp;
-  }
-});
-
-onValue(ref(database, 'battery/current'), (snapshot) => {
-  const current = snapshot.val();
-  if (current === null || lastValues.current === null) {
-    lastValues.current = current;
-    return;
-  }
-  if (Math.abs(current - lastValues.current) >= CURRENT_THRESHOLD) {
-    sendMessage(⚡ Current Alert: ${lastValues.current}A → ${current}A);
-    lastValues.current = current;
-  }
-});
-
-// Server
-app.get('/', (req, res) => {
-  res.json({ status: 'active', lastValues });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(Server running on port ${PORT});
-});
+app.get('/', (req, res) => res.send('✅ Bot Active'));
+app.listen(PORT, () => console.log(🚀 Server running on port ${PORT}));
