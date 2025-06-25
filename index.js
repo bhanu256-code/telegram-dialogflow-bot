@@ -1,65 +1,28 @@
-// ======================
-// ✅ ABSOLUTELY WORKING CODE
-// ======================
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-const dialogflow = require('@google-cloud/dialogflow');
-const fetch = require('node-fetch').default;  // Critical .default fix
-const { v4: uuidv4 } = require('uuid');
+// No dependencies needed - uses native Node.js
+const TELEGRAM_TOKEN = "8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI";
+const TELEGRAM_API = https://api.telegram.org/bot${TELEGRAM_TOKEN};
 
-// Initialize Firebase
-admin.initializeApp();
+// Minimal web server for Render
+require('http').createServer((req, res) => {
+  res.end('Bot is running in polling mode');
+}).listen(3000);
 
-// Configuration (using YOUR credentials)
-const CONFIG = {
-  TELEGRAM_TOKEN: '8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI',
-  DIALOGFLOW_PROJECT_ID: 'ev-battery-voice-bot-1f7bc'
-};
-
-exports.dialogflowWebhook = functions.https.onRequest(async (req, res) => {
-  // Immediate response to prevent timeouts
-  res.status(200).send('Processing...');
-
+// Simple polling (checks every 3 seconds)
+async function checkMessages() {
   try {
-    // Validate request
-    if (!req.body.message?.text) return;
-
-    const { chat, text } = req.body.message;
-
-    // Dialogflow setup
-    const sessionClient = new dialogflow.SessionsClient();
-    const sessionPath = sessionClient.projectAgentSessionPath(
-      CONFIG.DIALOGFLOW_PROJECT_ID,
-      uuidv4()
-    );
-
-    // Get Dialogflow response
-    const [response] = await sessionClient.detectIntent({
-      session: sessionPath,
-      queryInput: {
-        text: {
-          text: text,
-          languageCode: 'en'
-        }
-      }
-    });
-
-    // Send reply to Telegram (using string concatenation)
-    const telegramUrl = 'https://api.telegram.org/bot' + 
-                        CONFIG.TELEGRAM_TOKEN + 
-                        '/sendMessage';
-
-    await fetch(telegramUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chat.id,
-        text: response.queryResult.fulfillmentText || 
-              "I didn't understand that. Please try again."
-      })
-    });
-
+    const response = await fetch(${TELEGRAM_API}/getUpdates);
+    const data = await response.json();
+    
+    if (data.result?.length > 0) {
+      const msg = data.result[0].message;
+      console.log(📩 New message: ${msg.text});
+      // Add your reply logic here
+    }
   } catch (error) {
-    console.error('🔥 FULL ERROR:', error);
+    console.log("🔄 Polling... (Will retry)");
   }
-});
+  setTimeout(checkMessages, 3000);
+}
+
+console.log("🤖 Bot started (Polling Mode)");
+checkMessages();
