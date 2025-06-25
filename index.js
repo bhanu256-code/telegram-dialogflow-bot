@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { Telegraf } = require('telegraf');
 const { GoogleAuth } = require('google-auth-library');
@@ -29,9 +30,9 @@ bot.on('text', async (ctx) => {
 // Dialogflow integration
 async function askDialogflow(projectId, sessionId, query) {
   const auth = new GoogleAuth({
-    keyFile: 'service-account.json',
-    scopes: ['https://www.googleapis.com/auth/cloud-platform']
-  });
+  credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+  scopes: ['https://www.googleapis.com/auth/cloud-platform']
+});
   const client = await auth.getClient();
 
   // 🔴 ERROR WAS HERE (missing backticks ` for string interpolation)
