@@ -41,19 +41,19 @@ function sendMessage(message) {
     .catch((err) => console.error("Telegram Error:", err));
 }
 
-// Watch Temperature
+// ✅ Watch Temperature
 onValue(tempRef, (snapshot) => {
   const temp = snapshot.val();
-  if (temp !== lastTemp) {
+  if (temp !== lastTemp && temp !== null) {
     sendMessage(🌡 Battery Temperature: ${temp}°C);
     lastTemp = temp;
   }
 });
 
-// Watch Current
+// ✅ Watch Current
 onValue(currentRef, (snapshot) => {
   const current = snapshot.val();
-  if (current !== lastCurrent) {
+  if (current !== lastCurrent && current !== null) {
     sendMessage(🔋 Battery Current: ${current} A);
     lastCurrent = current;
   }
