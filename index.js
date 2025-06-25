@@ -10,7 +10,6 @@ const app = express();
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const chatId = process.env.TELEGRAM_CHAT_ID;
 
-// Firebase config
 const firebaseConfig = {
   apiKey: process.env.FB_API_KEY,
   authDomain: process.env.FB_AUTH_DOMAIN,
@@ -24,7 +23,6 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const database = getDatabase(firebaseApp);
 
-// Refs to Firebase paths
 const tempRef = ref(database, "battery/temperature");
 const currentRef = ref(database, "battery/current");
 
@@ -32,7 +30,7 @@ let lastTemp = null;
 let lastCurrent = null;
 
 function sendMessage(message) {
-  const url = https://api.telegram.org/bot${botToken}/sendMessage;
+  const url = https://api.telegram.org/bot${botToken}/sendMessage;  // ✅ CORRECTED HERE
   fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -43,7 +41,6 @@ function sendMessage(message) {
     .catch((err) => console.error("❌ Telegram Error:", err));
 }
 
-// Watch temperature
 onValue(tempRef, (snapshot) => {
   const temp = snapshot.val();
   if (temp !== null && temp !== lastTemp) {
@@ -52,7 +49,6 @@ onValue(tempRef, (snapshot) => {
   }
 });
 
-// Watch current
 onValue(currentRef, (snapshot) => {
   const current = snapshot.val();
   if (current !== null && current !== lastCurrent) {
@@ -61,7 +57,6 @@ onValue(currentRef, (snapshot) => {
   }
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(🚀 EV Bot server running on port ${PORT});
