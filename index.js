@@ -1,26 +1,14 @@
-// Add this at the VERY TOP of your file
-console.log("🤖 Bot is alive! Ignore port warnings - using polling mode.");
-process.exit(0);  // This stops the port scanning completely
-// ======================
-// ✅ GUARANTEED WORKING CODE (NO MODULES)
-// ======================
-
-// 1️⃣ HARDCODED TOKEN
 const TELEGRAM_TOKEN = "8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI";
-const TELEGRAM_API = "https://api.telegram.org/bot" + TELEGRAM_TOKEN;
+const PORT = process.env.PORT || 3000;
 
-// 2️⃣ SIMPLE TEST
-console.log("Testing connection to Telegram API...");
-
-// 3️⃣ BASIC HTTP REQUEST (no axios)
-fetch(TELEGRAM_API + "/getMe")
-  .then(response => response.json())
-  .then(data => {
-    console.log("Bot ONLINE: @" + data.result.username);
-    console.log("Ready to receive messages!");
+// Minimal web server (required for Render)
+require('express')()
+  .use(require('body-parser').json())
+  .post('/webhook', (req, res) => {
+    console.log("Received message:", req.body);
+    res.status(200).end();
   })
-  .catch(error => {
-    console.error("CONNECTION FAILED!");
-    console.log("Test this URL manually: " + TELEGRAM_API + "/getMe");
-  });
-process.env.PORT = 3000;  // Add this line at the end of your file
+  .listen(PORT, () => console.log(✅ Bot server running on ${PORT}));
+
+// Set webhook (run once)
+require('axios').get(https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook?url=${process.env.RENDER_EXTERNAL_URL}/webhook);
