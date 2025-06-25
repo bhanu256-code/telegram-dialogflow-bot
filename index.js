@@ -1,42 +1,27 @@
-require('dotenv').config();
 const express = require('express');
 const { Telegraf } = require('telegraf');
 const { GoogleAuth } = require('google-auth-library');
+
 const app = express();
 
-// Config (replace these!)
+// 💬 Config
 const BOT_TOKEN = '8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI';
 const DIALOGFLOW_PROJECT_ID = 'evbatterymonitor-4c65d';
 const PORT = process.env.PORT || 3000;
 
+// 🤖 Telegram Bot
 const bot = new Telegraf(BOT_TOKEN);
 bot.launch();
 
-// Handle Telegram messages
-bot.on('text', async (ctx) => {
-  try {
-    const response = await askDialogflow(
-      DIALOGFLOW_PROJECT_ID,
-      ctx.chat.id.toString(),
-      ctx.message.text
-    );
-    await ctx.reply(response);
-  } catch (error) {
-    console.error(error);
-    await ctx.reply("❌ Error processing your request.");
-  }
-});
-
-// Dialogflow integration
+// 🧠 Dialogflow Handler
 async function askDialogflow(projectId, sessionId, query) {
   const auth = new GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
-  scopes: ['https://www.googleapis.com/auth/cloud-platform']
-});
-  const client = await auth.getClient();
+    credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+  });
 
-  // 🔴 ERROR WAS HERE (missing backticks ` for string interpolation)
-  const url =`https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`;
+  const client = await auth.getClient();
+  const url = `https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`;
 
   const { data } = await client.request({
     url,
@@ -54,11 +39,26 @@ async function askDialogflow(projectId, sessionId, query) {
   return data.queryResult.fulfillmentText;
 }
 
-// Webhook setup
+// 📩 Handle messages from Telegram
+bot.on('text', async (ctx) => {
+  try {
+    const response = await askDialogflow(
+      DIALOGFLOW_PROJECT_ID,
+      ctx.chat.id.toString(),
+      ctx.message.text
+    );
+    await ctx.reply(response);
+  } catch (error) {
+    console.error(error);
+    await ctx.reply("❌ Error processing your request.");
+  }
+});
+
+// 🌐 Webhook for Render
 app.use(express.json());
 app.post('/webhook', (req, res) => {
   bot.handleUpdate(req.body, res);
 });
 
-// 🔵 FIXED THIS LINE — now has 2 correct brackets and proper backticks
+// 🚀 Start Server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
