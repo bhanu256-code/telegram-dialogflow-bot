@@ -1,26 +1,22 @@
-// Add this at the VERY TOP of your file
-console.log("🤖 Bot is alive! Ignore port warnings - using polling mode.");
-process.exit(0);  // This stops the port scanning completely
-// ======================
-// ✅ GUARANTEED WORKING CODE (NO MODULES)
-// ======================
-
-// 1️⃣ HARDCODED TOKEN
+// 1. HARDCODED TOKEN
 const TELEGRAM_TOKEN = "8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI";
 const TELEGRAM_API = "https://api.telegram.org/bot" + TELEGRAM_TOKEN;
 
-// 2️⃣ SIMPLE TEST
+// 2. SIMPLE STARTUP LOG
+console.log("Bot is alive. Using polling mode.");
 console.log("Testing connection to Telegram API...");
 
-// 3️⃣ BASIC HTTP REQUEST (no axios)
+// 3. BASIC HTTP REQUEST USING fetch
 fetch(TELEGRAM_API + "/getMe")
   .then(response => response.json())
   .then(data => {
-    console.log("Bot ONLINE: @" + data.result.username);
-    console.log("Ready to receive messages!");
+    console.log("Bot is online: @" + data.result.username);
+    console.log("Ready to receive messages.");
   })
   .catch(error => {
-    console.error("CONNECTION FAILED!");
-    console.log("Test this URL manually: " + TELEGRAM_API + "/getMe");
+    console.error("Connection to Telegram failed.");
+    console.log("You can manually test this URL: " + TELEGRAM_API + "/getMe");
   });
-rocess.env.PORT = 3000;  // Add this line at the end of yo
+
+// 4. OPTIONAL: Fake port to avoid Render scan issues
+process.env.PORT = 3000;
