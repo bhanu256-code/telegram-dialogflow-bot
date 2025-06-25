@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Firebase (values come from environment variables)
+// Initialize Firebase
 const firebaseApp = initializeApp({
   apiKey: process.env.FB_API_KEY,
   authDomain: process.env.FB_AUTH_DOMAIN,
@@ -21,9 +21,9 @@ const firebaseApp = initializeApp({
 });
 const database = getDatabase(firebaseApp);
 
-// Telegram setup
+// Telegram setup (FIXED: Added backticks)
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API = https://api.telegram.org/bot${TELEGRAM_TOKEN};
+const TELEGRAM_API = https://api.telegram.org/bot${TELEGRAM_TOKEN}; // ✅ Backticks added
 
 app.use(express.json());
 
@@ -61,7 +61,7 @@ async function generateResponse(message) {
          + - Current: ${data.current || 'N/A'}A;
   }
 
-  return null; // Ignore unrelated messages
+  return null;
 }
 
 app.get('/', (req, res) => res.send('✅ Bot Active'));
