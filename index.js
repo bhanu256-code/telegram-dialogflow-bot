@@ -10,6 +10,7 @@ const app = express();
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const chatId = process.env.TELEGRAM_CHAT_ID;
 
+// Firebase config
 const firebaseConfig = {
   apiKey: process.env.FB_API_KEY,
   authDomain: process.env.FB_AUTH_DOMAIN,
@@ -23,6 +24,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const database = getDatabase(firebaseApp);
 
+// Refs to Firebase paths
 const tempRef = ref(database, "battery/temperature");
 const currentRef = ref(database, "battery/current");
 
@@ -37,29 +39,30 @@ function sendMessage(message) {
     body: JSON.stringify({ chat_id: chatId, text: message }),
   })
     .then((res) => res.json())
-    .then((data) => console.log("Sent:", data))
-    .catch((err) => console.error("Telegram Error:", err));
+    .then((data) => console.log("✅ Sent:", data))
+    .catch((err) => console.error("❌ Telegram Error:", err));
 }
 
-// ✅ Watch Temperature
+// Watch temperature
 onValue(tempRef, (snapshot) => {
   const temp = snapshot.val();
-  if (temp !== lastTemp && temp !== null) {
+  if (temp !== null && temp !== lastTemp) {
     sendMessage(🌡 Battery Temperature: ${temp}°C);
     lastTemp = temp;
   }
 });
 
-// ✅ Watch Current
+// Watch current
 onValue(currentRef, (snapshot) => {
   const current = snapshot.val();
-  if (current !== lastCurrent && current !== null) {
+  if (current !== null && current !== lastCurrent) {
     sendMessage(🔋 Battery Current: ${current} A);
     lastCurrent = current;
   }
 });
 
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(EV Bot server running on port ${PORT});
+  console.log(🚀 EV Bot server running on port ${PORT});
 });
