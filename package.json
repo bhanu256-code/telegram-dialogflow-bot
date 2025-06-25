@@ -1,4 +1,8 @@
 {
+  "name": "telegram-dialogflow-bot",
+  "engines": {
+    "node": "18"
+  },
   "dependencies": {
     "firebase-functions": "^4.0.0",
     "firebase-admin": "^11.0.0",
