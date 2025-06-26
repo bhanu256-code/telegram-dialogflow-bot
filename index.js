@@ -1,3 +1,4 @@
+const axios = require('axios'); // <-- Add this line
 const express = require('express');
 const { Telegraf } = require('telegraf');
 const { GoogleAuth } = require('google-auth-library');
@@ -46,6 +47,19 @@ bot.on('text', async (ctx) => {
       DIALOGFLOW_PROJECT_ID,
       ctx.chat.id.toString(),
       ctx.message.text
+      // ✅ Google Sheets Logging
+const logData = {
+  temperature: 37.5,
+  current: 1.6
+};
+
+axios.post('https://script.google.com/macros/s/AKfycbzEfb6jkBzKOtvKhJr2jun5QwX5Fxph-3wAWLv1wbHTlSWPp5xuHq7GpseIip1kb0kH/exec', logData)
+  .then(() => {
+    console.log("✅ Data sent to Google Sheets:", logData);
+  })
+  .catch((err) => {
+    console.error("❌ Error sending to Google Sheets:", err.message);
+  });
     );
     await ctx.reply(response);
   } catch (error) {
