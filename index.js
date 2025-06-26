@@ -1,50 +1,106 @@
-const express = require("express");
-const { Telegraf } = require("telegraf");
-const { GPT } = require("google-auth-library"); // Optional if you're using Dialogflow directly
-const axios = require("axios");
-const gTTS = require("gtts");
-require("dotenv").config();
+const express = require('express');
+const { Telegraf } = require('telegraf');
+const { GoogleAuth } = require('google-auth-library');
+const fetch = require('node-fetch');
+const gTTS = require('gtts');
+const ffmpeg = require('fluent-ffmpeg');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
-const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Route for Render uptime check
-app.get("/", (req, res) => {
-  res.send("🚀 EV Bot is Live!");
-});
+// 💬 Config
+const BOT_TOKEN = '8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI';
+const DIALOGFLOW_PROJECT_ID = 'evbatterymonitor-4c65d';
+const PORT = process.env.PORT || 3000;
 
-// Main message handler
-bot.on("text", async (ctx) => {
-  try {
-    const userMessage = ctx.message.text;
+// 🤖 Telegram Bot
+const bot = new Telegraf(BOT_TOKEN);
+bot.launch();
 
-    // Simple text echo OR connect with Dialogflow here
-    const botReply = You said: "${userMessage}";
+// ✅ Create voice folder if not exists
+const voiceDir = path.join(__dirname, 'voice');
+if (!fs.existsSync(voiceDir)) {
+  fs.mkdirSync(voiceDir);
+}
 
-    // Send voice reply
-    const gtts = new gTTS(botReply, 'en');
-    const filePath = voice_${Date.now()}.mp3;
+// 🧠 Dialogflow Handler
+async function askDialogflow(projectId, sessionId, query) {
+  const auth = new GoogleAuth({
+    credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+  });
 
-    gtts.save(filePath, async function (err) {
-      if (err) {
-        console.error("❌ Error saving audio:", err);
-        ctx.reply("Sorry, couldn't create voice.");
-      } else {
-        await ctx.replyWithVoice({ source: filePath });
+  const client = await auth.getClient();
+  const url = `https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`;
+
+  const { data } = await client.request({
+    url,
+    method: 'POST',
+    data: {
+      queryInput: {
+        text: {
+          text: query,
+          languageCode: 'en-US'
+        }
       }
+    }
+  });
+
+  return data.queryResult.fulfillmentText;
+}
+
+// 📩 Handle messages from Telegram
+bot.on('text', async (ctx) => {
+  try {
+    const text = ctx.message.text;
+
+    const response = await askDialogflow(
+      DIALOGFLOW_PROJECT_ID,
+      ctx.chat.id.toString(),
+      text
+    );
+
+    // Save response as audio
+    const filename = `voice_${Date.now()}`;
+    const mp3Path = `voice/${filename}.mp3`;
+    const oggPath = `voice/${filename}.ogg`;
+
+    const gtts = new gTTS(response, 'en');
+    await new Promise((resolve, reject) => {
+      gtts.save(mp3Path, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
     });
 
+    // Convert mp3 to ogg
+    await new Promise((resolve, reject) => {
+      ffmpeg(mp3Path)
+        .outputOptions(['-acodec libopus'])
+        .save(oggPath)
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    // Send voice back
+    await ctx.replyWithVoice({ source: oggPath });
+
+    // Cleanup
+    fs.unlinkSync(mp3Path);
+    fs.unlinkSync(oggPath);
+
   } catch (error) {
-    console.error("⚠ Error:", error);
-    ctx.reply("Something went wrong!");
+    console.error(error);
+    await ctx.reply("❌ Error processing your voice request.");
   }
 });
 
-// Start Express server
-app.listen(PORT, () => {
-  console.log(🚀 Server running on port ${PORT});
+// 🌐 Webhook for Render
+app.use(express.json());
+app.post('/webhook', (req, res) => {
+  bot.handleUpdate(req.body, res);
 });
 
-// Start Telegram bot
-bot.launch();
+// 🚀 Start Server
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
