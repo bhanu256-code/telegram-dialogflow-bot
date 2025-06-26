@@ -1,7 +1,11 @@
-const axios = require('axios'); // <-- Add this line
 const express = require('express');
 const { Telegraf } = require('telegraf');
 const { GoogleAuth } = require('google-auth-library');
+const fetch = require('node-fetch');
+const gTTS = require('gtts');
+const ffmpeg = require('fluent-ffmpeg');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 
@@ -12,6 +16,14 @@ const PORT = process.env.PORT || 3000;
 
 // 🤖 Telegram Bot
 const bot = new Telegraf(BOT_TOKEN);
+bot.launch();
+
+// ✅ Create voice folder if not exists
+const voiceDir = path.join(__dirname, 'voice');
+if (!fs.existsSync(voiceDir)) {
+  fs.mkdirSync(voiceDir);
+}
+
 // 🧠 Dialogflow Handler
 async function askDialogflow(projectId, sessionId, query) {
   const auth = new GoogleAuth({
@@ -41,31 +53,46 @@ async function askDialogflow(projectId, sessionId, query) {
 // 📩 Handle messages from Telegram
 bot.on('text', async (ctx) => {
   try {
+    const text = ctx.message.text;
+
     const response = await askDialogflow(
       DIALOGFLOW_PROJECT_ID,
       ctx.chat.id.toString(),
-      ctx.message.text
+      text
     );
 
-    await ctx.reply(response); // Send Dialogflow reply to user
+    // Save response as audio
+    const filename = `voice_${Date.now()}`;
+    const mp3Path = `voice/${filename}.mp3`;
+    const oggPath = `voice/${filename}.ogg`;
 
-    // ✅ Google Sheets Logging (Dummy Values for now)
-    const logData = {
-      temperature: 37.5,
-      current: 1.6
-    };
-
-    axios.post('https://script.google.com/macros/s/AKfycbzEfb6jkBzKOtvKhJr2jun5QwX5Fxph-3wAWLv1wbHTlSWPp5xuHq7GpseIip1kb0kH/exec', logData)
-      .then(() => {
-        console.log("✅ Data sent to Google Sheets:", logData);
-      })
-      .catch((err) => {
-        console.error("❌ Error sending to Google Sheets:", err.message);
+    const gtts = new gTTS(response, 'en');
+    await new Promise((resolve, reject) => {
+      gtts.save(mp3Path, (err) => {
+        if (err) reject(err);
+        else resolve();
       });
+    });
+
+    // Convert mp3 to ogg
+    await new Promise((resolve, reject) => {
+      ffmpeg(mp3Path)
+        .outputOptions(['-acodec libopus'])
+        .save(oggPath)
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    // Send voice back
+    await ctx.replyWithVoice({ source: oggPath });
+
+    // Cleanup
+    fs.unlinkSync(mp3Path);
+    fs.unlinkSync(oggPath);
 
   } catch (error) {
     console.error(error);
-    await ctx.reply("❌ Error processing your request.");
+    await ctx.reply("❌ Error processing your voice request.");
   }
 });
 
@@ -77,18 +104,4 @@ app.post('/webhook', (req, res) => {
 
 // 🚀 Start Server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-// 🔁 Send dummy data to Google Sheets every 1 minute
-setInterval(() => {
-  const logData = {
-    temperature: 37.5,
-    current: 1.6
-  };
 
-  axios.post('https://script.google.com/macros/s/AKfycbzEfb6jkBzKOtvKhJr2jun5QwX5Fxph-3wAWLv1wbHTlSWPp5xuHq7GpseIip1kb0kH/exec', logData)
-    .then(() => {
-      console.log("📤 Data sent to Google Sheets (every 1 min):", logData);
-    })
-    .catch((err) => {
-      console.error("❌ Error in interval logging:", err.message);
-    });
-}, 60000);
