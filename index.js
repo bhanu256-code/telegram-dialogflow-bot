@@ -12,8 +12,6 @@ const PORT = process.env.PORT || 3000;
 
 // 🤖 Telegram Bot
 const bot = new Telegraf(BOT_TOKEN);
-bot.launch();
-
 // 🧠 Dialogflow Handler
 async function askDialogflow(projectId, sessionId, query) {
   const auth = new GoogleAuth({
