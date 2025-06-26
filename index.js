@@ -77,3 +77,18 @@ app.post('/webhook', (req, res) => {
 
 // 🚀 Start Server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// 🔁 Send dummy data to Google Sheets every 1 minute
+setInterval(() => {
+  const logData = {
+    temperature: 37.5,
+    current: 1.6
+  };
+
+  axios.post('https://script.google.com/macros/s/AKfycbzEfb6jkBzKOtvKhJr2jun5QwX5Fxph-3wAWLv1wbHTlSWPp5xuHq7GpseIip1kb0kH/exec', logData)
+    .then(() => {
+      console.log("📤 Data sent to Google Sheets (every 1 min):", logData);
+    })
+    .catch((err) => {
+      console.error("❌ Error in interval logging:", err.message);
+    });
+}, 60000);
