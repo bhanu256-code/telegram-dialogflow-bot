@@ -14,7 +14,7 @@ const app = express();
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const DIALOGFLOW_PROJECT_ID = 'evbatterymonitor-4c65d';
 const SHEET_ID = '1zh03pnEhFtgVPatYBKbEzWF97NvofH4WiW8H6WkRdh4';
-const SHEET_RANGE = 'Ev Battery Log';
+const SHEET_RANGE = 'Sheet1';
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const PORT = process.env.PORT || 3000;
 
