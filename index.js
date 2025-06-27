@@ -7,8 +7,6 @@ const gTTS = require('gtts');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
-const SHEET_ID = process.env.SHEET_ID;
-const SHEET_RANGE = process.env.SHEET_RANGE;
 
 const app = express();
 
