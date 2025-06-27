@@ -1,6 +1,7 @@
 const express = require('express');
 const { Telegraf } = require('telegraf');
 const { GoogleAuth } = require('google-auth-library');
+const { google } = require('googleapis');
 const fetch = require('node-fetch');
 const gTTS = require('gtts');
 const ffmpeg = require('fluent-ffmpeg');
@@ -9,31 +10,40 @@ const path = require('path');
 
 const app = express();
 
-// 💬 Config
-const BOT_TOKEN = '8105233862:AAFWbwNfkBcX5Ng5mpVF6jd8JcaZq7RQZnI';
+// === Config ===
+const BOT_TOKEN = 'your_telegram_bot_token_here';
 const DIALOGFLOW_PROJECT_ID = 'evbatterymonitor-4c65d';
+const SHEET_ID = '1zh03pnEhFtgVPatYBKbEzWF97NvofH4WiW8H6WkRdh4';
+const SHEET_NAME = 'Ev Battery Log';
 const PORT = process.env.PORT || 3000;
 
-// 🤖 Telegram Bot
+// === Setup Bot ===
 const bot = new Telegraf(BOT_TOKEN);
 
-// ✅ Create voice folder if not exists
-const voiceDir = path.join(__dirname, 'voice');
-if (!fs.existsSync(voiceDir)) {
-  fs.mkdirSync(voiceDir);
-}
+// === Google Auth Setup ===
+const credentials = require('./service-account.json');
 
-// 🧠 Dialogflow Handler
-async function askDialogflow(projectId, sessionId, query) {
-  const auth = new GoogleAuth({
-    credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+const auth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
+const sheets = google.sheets({ version: 'v4', auth });
+
+// === Create voice directory ===
+const voiceDir = path.join(__dirname, 'voice');
+if (!fs.existsSync(voiceDir)) fs.mkdirSync(voiceDir);
+
+// === Dialogflow AI Function ===
+async function askDialogflow(query, sessionId) {
+  const client = new GoogleAuth({
+    credentials,
     scopes: ['https://www.googleapis.com/auth/cloud-platform']
   });
 
-  const client = await auth.getClient();
-  const url = `https://dialogflow.googleapis.com/v2/projects/${projectId}/agent/sessions/${sessionId}:detectIntent`;
+  const authClient = await client.getClient();
+  const url = `https://dialogflow.googleapis.com/v2/projects/${DIALOGFLOW_PROJECT_ID}/agent/sessions/${sessionId}:detectIntent`;
 
-  const { data } = await client.request({
+  const { data } = await authClient.request({
     url,
     method: 'POST',
     data: {
@@ -49,18 +59,55 @@ async function askDialogflow(projectId, sessionId, query) {
   return data.queryResult.fulfillmentText;
 }
 
-// 📩 Handle messages from Telegram
+// === Google Sheets Logger ===
+async function logToSheet(user, input, reply) {
+  try {
+    const now = new Date();
+    const values = [
+      [now.toLocaleString(), user, input, reply]
+    ];
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: ${SHEET_NAME}!A1,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: values
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error logging to Google Sheets:', err);
+  }
+}
+
+// === Handle Text Messages ===
 bot.on('text', async (ctx) => {
   try {
     const text = ctx.message.text;
+    const user = ctx.from.username || ctx.from.first_name;
 
-    const response = await askDialogflow(
-      DIALOGFLOW_PROJECT_ID,
-      ctx.chat.id.toString(),
-      text
-    );
+    const response = await askDialogflow(text, ctx.chat.id.toString());
 
-    // Save response as audio
+    await ctx.reply(response);
+    await logToSheet(user, text, response);
+
+  } catch (err) {
+    console.error(err);
+    await ctx.reply('❌ Error handling your text.');
+  }
+});
+
+// === Handle Voice Messages ===
+bot.on('voice', async (ctx) => {
+  try {
+    const fileId = ctx.message.voice.file_id;
+    const url = await ctx.telegram.getFileLink(fileId);
+    const user = ctx.from.username || ctx.from.first_name;
+
+    // Optional: You can transcribe voice with Speech-to-Text here in future
+
+    const query = 'Battery status'; // default query when voice is received
+    const response = await askDialogflow(query, ctx.chat.id.toString());
+
     const filename = `voice_${Date.now()}`;
     const mp3Path = `voice/${filename}.mp3`;
     const oggPath = `voice/${filename}.ogg`;
@@ -73,7 +120,6 @@ bot.on('text', async (ctx) => {
       });
     });
 
-    // Convert mp3 to ogg
     await new Promise((resolve, reject) => {
       ffmpeg(mp3Path)
         .outputOptions(['-acodec libopus'])
@@ -82,24 +128,28 @@ bot.on('text', async (ctx) => {
         .on('error', reject);
     });
 
-    // Send voice back
     await ctx.replyWithVoice({ source: oggPath });
+    await logToSheet(user, '[Voice Input]', response);
 
-    // Cleanup
     fs.unlinkSync(mp3Path);
     fs.unlinkSync(oggPath);
 
-  } catch (error) {
-    console.error(error);
-    await ctx.reply("❌ Error processing your voice request.");
+  } catch (err) {
+    console.error(err);
+    await ctx.reply('❌ Error handling your voice.');
   }
 });
 
-// 🌐 Webhook for Render
+// === Health Check ===
+app.get('/', (req, res) => res.send('✅ Bot is running.'));
+
+// === Webhook Endpoint ===
 app.use(express.json());
 app.post('/webhook', (req, res) => {
   bot.handleUpdate(req.body, res);
 });
 
-// 🚀 Start Server
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// === Start Server ===
+app.listen(PORT, () => {
+  console.log(`🚀 Bot is running on port ${PORT}`);
+});
