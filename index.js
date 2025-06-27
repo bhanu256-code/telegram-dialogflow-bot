@@ -16,7 +16,6 @@ const PORT = process.env.PORT || 3000;
 
 // 🤖 Telegram Bot
 const bot = new Telegraf(BOT_TOKEN);
-bot.launch();
 
 // ✅ Create voice folder if not exists
 const voiceDir = path.join(__dirname, 'voice');
