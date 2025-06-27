@@ -68,7 +68,7 @@ async function logToSheet(user, input, reply) {
     ];
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
-      range: ${SHEET_NAME}!A1,
+      range: `${SHEET_NAME}!A1`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: values
