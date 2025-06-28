@@ -12,9 +12,9 @@ const app = express();
 
 // === Config (Use ENV variables for security) ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const DIALOGFLOW_PROJECT_ID = 'evbatterymonitor-4c65d';
-const SHEET_ID = '1zh03pnEhFtgVPatYBKbEzWF97NvofH4WiW8H6WkRdh4';
-const SHEET_RANGE = 'Sheet1';
+const DIALOGFLOW_PROJECT_ID = process.env.DIALOGFLOW_PROJECT_ID;
+const SHEET_ID = process.env.SHEET_ID;
+const SHEET_RANGE = process.env.SHEET_RANGE;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const PORT = process.env.PORT || 3000;
 
