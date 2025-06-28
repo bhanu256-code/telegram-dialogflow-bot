@@ -7,7 +7,7 @@ const gTTS = require('gtts');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai'); // ✅ UPDATED
 
 const app = express();
 
@@ -23,15 +23,13 @@ const PORT = process.env.PORT || 3000;
 // === BOT SETUP ===
 const bot = new Telegraf(BOT_TOKEN);
 
-// === OPENAI SETUP ===
-const openai = new OpenAIApi(
-  new Configuration({
-    apiKey: OPENAI_API_KEY
-  })
-);
+// === OPENAI SETUP === ✅ FIXED FOR v5.8.2
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY
+});
 
 async function askChatGPT(query) {
-  const res = await openai.createChatCompletion({
+  const res = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
       { role: 'system', content: 'You are an EV battery assistant bot.' },
@@ -41,7 +39,7 @@ async function askChatGPT(query) {
     temperature: 0.7,
     top_p: 0.9
   });
-  return res.data.choices[0].message.content.trim();
+  return res.choices[0].message.content.trim();
 }
 
 // === GOOGLE SHEETS ===
