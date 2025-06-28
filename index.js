@@ -7,61 +7,51 @@ const gTTS = require('gtts');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+const { Configuration, OpenAIApi } = require('openai');
 
 const app = express();
 
-// === Config (Use ENV variables for security) ===
+// === CONFIG ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const DIALOGFLOW_PROJECT_ID = process.env.DIALOGFLOW_PROJECT_ID;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SHEET_ID = process.env.SHEET_ID;
 const SHEET_RANGE = process.env.SHEET_RANGE;
+const GOOGLE_APPLICATION_CREDENTIALS_JSON = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const PORT = process.env.PORT || 3000;
 
-// === Setup Bot ===
+// === BOT SETUP ===
 const bot = new Telegraf(BOT_TOKEN);
 
-// === Google Auth Setup ===
-const googleCredentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || '{}');
-if (!googleCredentials.client_email) throw new Error('⚠️ Google Auth JSON is invalid!');
+// === OPENAI SETUP ===
+const openai = new OpenAIApi(
+  new Configuration({
+    apiKey: OPENAI_API_KEY
+  })
+);
 
+async function askChatGPT(query) {
+  const res = await openai.createChatCompletion({
+    model: 'gpt-3.5-turbo',
+    messages: [
+      { role: 'system', content: 'You are an EV battery assistant bot.' },
+      { role: 'user', content: query }
+    ],
+    max_tokens: 300,
+    temperature: 0.7,
+    top_p: 0.9
+  });
+  return res.data.choices[0].message.content.trim();
+}
+
+// === GOOGLE SHEETS ===
+const googleCredentials = JSON.parse(GOOGLE_APPLICATION_CREDENTIALS_JSON || '{}');
 const auth = new google.auth.GoogleAuth({
   credentials: googleCredentials,
   scopes: ['https://www.googleapis.com/auth/spreadsheets']
 });
 const sheets = google.sheets({ version: 'v4', auth });
 
-// === Create 'voice' directory if missing ===
-const voiceDir = path.join(__dirname, 'voice');
-if (!fs.existsSync(voiceDir)) fs.mkdirSync(voiceDir);
-
-// === Dialogflow AI Function ===
-async function askDialogflow(query, sessionId) {
-  const client = new GoogleAuth({
-    credentials: googleCredentials,
-    scopes: ['https://www.googleapis.com/auth/cloud-platform']
-  });
-
-  const authClient = await client.getClient();
-  const url = `https://dialogflow.googleapis.com/v2/projects/${DIALOGFLOW_PROJECT_ID}/agent/sessions/${sessionId}:detectIntent`;
-
-  const { data } = await authClient.request({
-    url,
-    method: 'POST',
-    data: {
-      queryInput: {
-        text: {
-          text: query,
-          languageCode: 'en-US'
-        }
-      }
-    }
-  });
-
-  return data.queryResult.fulfillmentText;
-}
-
-// === Google Sheets Logger ===
 async function logToSheet(user, input, reply) {
   try {
     const now = new Date();
@@ -77,13 +67,17 @@ async function logToSheet(user, input, reply) {
   }
 }
 
-// === Handle Text Messages ===
+// === VOICE DIRECTORY ===
+const voiceDir = path.join(__dirname, 'voice');
+if (!fs.existsSync(voiceDir)) fs.mkdirSync(voiceDir);
+
+// === TEXT HANDLER ===
 bot.on('text', async (ctx) => {
   try {
     const text = ctx.message.text;
     const user = ctx.from.username || ctx.from.first_name;
 
-    const response = await askDialogflow(text, ctx.chat.id.toString());
+    const response = await askChatGPT(text);
     await ctx.reply(response);
     await logToSheet(user, text, response);
   } catch (err) {
@@ -92,24 +86,24 @@ bot.on('text', async (ctx) => {
   }
 });
 
-// === Handle Voice Messages ===
+// === VOICE HANDLER ===
 bot.on('voice', async (ctx) => {
   try {
     const fileId = ctx.message.voice.file_id;
     const url = await ctx.telegram.getFileLink(fileId);
     const user = ctx.from.username || ctx.from.first_name;
 
-    const query = 'Battery status'; // fallback query for voice
-    const response = await askDialogflow(query, ctx.chat.id.toString());
+    const fallbackQuery = 'Battery status';
+    const response = await askChatGPT(fallbackQuery);
 
     const filename = `voice_${Date.now()}`;
     const mp3Path = path.join(voiceDir, `${filename}.mp3`);
     const oggPath = path.join(voiceDir, `${filename}.ogg`);
 
     const gtts = new gTTS(response, 'en');
-    await new Promise((resolve, reject) => {
-      gtts.save(mp3Path, (err) => (err ? reject(err) : resolve()));
-    });
+    await new Promise((resolve, reject) =>
+      gtts.save(mp3Path, err => (err ? reject(err) : resolve()))
+    );
 
     await new Promise((resolve, reject) => {
       ffmpeg(mp3Path)
@@ -122,7 +116,6 @@ bot.on('voice', async (ctx) => {
     await ctx.replyWithVoice({ source: oggPath });
     await logToSheet(user, '[Voice Input]', response);
 
-    // Safer file cleanup
     if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
     if (fs.existsSync(oggPath)) fs.unlinkSync(oggPath);
   } catch (err) {
@@ -131,21 +124,18 @@ bot.on('voice', async (ctx) => {
   }
 });
 
-// === Health Check ===
+// === HEALTH CHECK ===
 app.get('/', (req, res) => res.send('✅ EV Protector Bot is running.'));
 
-// === Webhook Endpoint ===
+// === WEBHOOK ENDPOINT ===
 app.use(express.json());
 app.post('/webhook', (req, res) => {
   bot.handleUpdate(req.body, res);
 });
 
-// === Set Webhook Before Starting Server ===
+// === SET WEBHOOK & START SERVER ===
 bot.telegram.setWebhook(WEBHOOK_URL)
   .then(() => console.log('✅ Webhook successfully set!'))
   .catch(err => console.error('❌ Webhook setup failed:', err));
 
-// === Start Server ===
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
