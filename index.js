@@ -12,7 +12,7 @@ const app = express();
 
 // === CONFIG ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // ✅ Only Gemini
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // ✅ Gemini only
 const SHEET_ID = process.env.SHEET_ID;
 const SHEET_RANGE = process.env.SHEET_RANGE;
 const GOOGLE_APPLICATION_CREDENTIALS_JSON = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
@@ -24,10 +24,10 @@ const bot = new Telegraf(BOT_TOKEN);
 
 // === GEMINI SETUP === ✅
 const genAIClient = new genAI.GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAIClient.getGenerativeModel({ model: 'gemini-pro' });
 
-async function askChatGPT(query) {
+async function askGemini(query) {
   try {
+    const model = genAIClient.getGenerativeModel({ model: 'models/gemini-pro' }); // ✅ Correct model name
     const result = await model.generateContent(query);
     const response = result.response;
     return response.text().trim();
@@ -70,7 +70,7 @@ bot.on('text', async (ctx) => {
     const text = ctx.message.text;
     const user = ctx.from.username || ctx.from.first_name;
 
-    const response = await askChatGPT(text);
+    const response = await askGemini(text); // ✅ Corrected call
     await ctx.reply(response);
     await logToSheet(user, text, response);
   } catch (err) {
@@ -87,7 +87,7 @@ bot.on('voice', async (ctx) => {
     const user = ctx.from.username || ctx.from.first_name;
 
     const fallbackQuery = 'Battery status';
-    const response = await askChatGPT(fallbackQuery);
+    const response = await askGemini(fallbackQuery); // ✅ Corrected call
 
     const filename = `voice_${Date.now()}`;
     const mp3Path = path.join(voiceDir, `${filename}.mp3`);
