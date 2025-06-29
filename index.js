@@ -27,7 +27,7 @@ const genAIClient = new genAI.GoogleGenerativeAI(GEMINI_API_KEY);
 
 async function askGemini(query) {
   try {
-    const model = genAIClient.getGenerativeModel({ model: 'models/gemini-pro' }); // ✅ Correct model name
+    const model = genAIClient.getGenerativeModel({ model: 'gemini-pro' }); // ✅ Correct model name
     const result = await model.generateContent(query);
     const response = result.response;
     return response.text().trim();
