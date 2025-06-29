@@ -76,4 +76,4 @@ async function logToSheet(user, input, reply) {
       }
     });
   } catch (err) {
-    console.error('❌ Sheets Error
+    console.error('❌ Sheets Error:', err.message);
