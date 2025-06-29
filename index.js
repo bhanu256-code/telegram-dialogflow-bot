@@ -1,19 +1,18 @@
 const express = require('express');
 const { Telegraf } = require('telegraf');
-const { GoogleAuth } = require('google-auth-library');
 const { google } = require('googleapis');
 const fetch = require('node-fetch');
 const gTTS = require('gtts');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
-const OpenAI = require('openai'); // ✅ UPDATED
+const genAI = require('@google/generative-ai'); // ✅ Gemini
 
 const app = express();
 
 // === CONFIG ===
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // ✅ Only Gemini
 const SHEET_ID = process.env.SHEET_ID;
 const SHEET_RANGE = process.env.SHEET_RANGE;
 const GOOGLE_APPLICATION_CREDENTIALS_JSON = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
@@ -23,23 +22,19 @@ const PORT = process.env.PORT || 3000;
 // === BOT SETUP ===
 const bot = new Telegraf(BOT_TOKEN);
 
-// === OPENAI SETUP === ✅ FIXED FOR v5.8.2
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY
-});
+// === GEMINI SETUP === ✅
+const genAIClient = new genAI.GoogleGenerativeAI(GEMINI_API_KEY);
+const model = genAIClient.getGenerativeModel({ model: 'gemini-pro' });
 
 async function askChatGPT(query) {
-  const res = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [
-      { role: 'system', content: 'You are an EV battery assistant bot.' },
-      { role: 'user', content: query }
-    ],
-    max_tokens: 300,
-    temperature: 0.7,
-    top_p: 0.9
-  });
-  return res.choices[0].message.content.trim();
+  try {
+    const result = await model.generateContent(query);
+    const response = result.response;
+    return response.text().trim();
+  } catch (err) {
+    console.error('❌ Gemini API Error:', err);
+    return '⚠️ Gemini API error. Try again.';
+  }
 }
 
 // === GOOGLE SHEETS ===
@@ -123,7 +118,7 @@ bot.on('voice', async (ctx) => {
 });
 
 // === HEALTH CHECK ===
-app.get('/', (req, res) => res.send('✅ EV Protector Bot is running.'));
+app.get('/', (req, res) => res.send('✅ EV Protector Bot (Gemini version) is running.'));
 
 // === WEBHOOK ENDPOINT ===
 app.use(express.json());
